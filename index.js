@@ -3,7 +3,7 @@ const { S3Client, GetObjectCommand } = require("@aws-sdk/client-s3");
 require("dotenv").config(); // Load AWS credentials from .env
 
 const app = express();
-const PORT = 3000;
+const PORT = 8080;
 
 // AWS S3 Configuration
 const s3 = new S3Client({
