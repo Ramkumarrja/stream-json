@@ -30,20 +30,23 @@ app.get("/stream-json", async (req, res) => {
 
   try {
     const filePath = FOLDER_NAME ? `${FOLDER_NAME}/${FILE_NAME}` : FILE_NAME;
-    console.log("Fetching from S3:", filePath);
+    console.log(`[INFO] Fetching from S3: ${filePath}`);
 
     const command = new GetObjectCommand({
       Bucket: BUCKET_NAME,
       Key: filePath,
     });
 
+    console.log("[DEBUG] Sending request to S3...");
     const { Body } = await s3.send(command);
+    console.log("[SUCCESS] File retrieved from S3, starting to stream...");
 
     res.write("[\n");
     let isFirstObject = true;
     let buffer = "";
 
     for await (const chunk of Body) {
+      console.log(`[DEBUG] Received chunk of size: ${chunk.length} bytes`);
       buffer += chunk.toString();
 
       let startIdx = buffer.indexOf("{");
@@ -58,18 +61,23 @@ app.get("/stream-json", async (req, res) => {
           if (!isFirstObject) res.write(",\n");
           res.write(jsonObj);
           isFirstObject = false;
-        } catch (e) {}
+          console.log("[DEBUG] Successfully streamed an object.");
+        } catch (e) {
+          console.warn("[WARNING] Invalid JSON detected, skipping...");
+        }
       }
 
       if (buffer.length > 1000) {
+        console.log("[DEBUG] Buffer is large, trimming...");
         buffer = buffer.slice(-1000);
       }
     }
 
+    console.log("[INFO] Streaming complete.");
     res.write("\n]");
     res.end();
   } catch (error) {
-    console.error("Error streaming JSON from S3:", error);
+    console.error("[ERROR] Error streaming JSON from S3:", error);
     res.status(500).json({ error: "Failed to fetch data from S3" });
   }
 });
