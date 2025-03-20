@@ -3,7 +3,7 @@ const { S3Client, GetObjectCommand } = require("@aws-sdk/client-s3");
 require("dotenv").config(); // Load environment variables
 
 const app = express();
-const PORT = process.env.PORT || 8080; // Default to 8080
+const PORT = 8080; // Default to 8080
 
 // Ensure all required env variables are set
 if (!process.env.AWS_REGION || !process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY || !process.env.S3_BUCKET_NAME || !process.env.S3_FILE_NAME) {
