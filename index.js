@@ -2,7 +2,7 @@ const express = require("express");
 const { S3Client, GetObjectCommand } = require("@aws-sdk/client-s3");
 
 const app = express();
-const PORT = 3000;
+const PORT = 8080;
 
 const s3 = new S3Client({ region: "us-east-1" });
 const BUCKET_NAME = "json-stream";
