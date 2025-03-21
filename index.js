@@ -30,7 +30,6 @@ app.get("/", (req, res) => {
   res.send({ message: "Server is running" });
 });
 
-// Stream JSON from S3
 app.get("/stream-json", async (req, res) => {
   res.setHeader("Content-Type", "application/json");
 
@@ -39,12 +38,16 @@ app.get("/stream-json", async (req, res) => {
     console.log(`[INFO] Fetching from S3: ${filePath}`);
 
     const command = new GetObjectCommand({ Bucket: BUCKET_NAME, Key: filePath });
-    
+
     console.log("[DEBUG] Sending request to S3...");
     const { Body } = await s3.send(command);
     if (!Body) throw new Error("Empty response body from S3");
 
     console.log("[SUCCESS] File retrieved from S3, starting to stream...");
+
+    const startTime = Date.now(); // Start time of streaming
+    let totalSize = 0;
+    let totalObjects = 0;
 
     res.write("[\n");
     let isFirstObject = true;
@@ -52,6 +55,7 @@ app.get("/stream-json", async (req, res) => {
 
     for await (const chunk of Body) {
       console.log(`[DEBUG] Received chunk of size: ${chunk.length} bytes`);
+      totalSize += chunk.length;
       buffer += chunk.toString();
 
       let startIdx = buffer.indexOf("{");
@@ -66,6 +70,7 @@ app.get("/stream-json", async (req, res) => {
           if (!isFirstObject) res.write(",\n");
           res.write(jsonObj);
           isFirstObject = false;
+          totalObjects++;
           console.log("[DEBUG] Successfully streamed an object.");
         } catch (e) {
           console.warn("[WARNING] Invalid JSON detected, skipping...");
@@ -82,13 +87,24 @@ app.get("/stream-json", async (req, res) => {
     }
 
     console.log("[INFO] Streaming complete.");
-    res.write("\n]");
+    const endTime = Date.now(); // End time of streaming
+    const duration = (endTime - startTime) / 1000; // Duration in seconds
+
+    res.write(`\n]`);
+
+    console.log(`[INFO] Streamed ${totalObjects} JSON objects.`);
+    console.log(`[INFO] Total data streamed: ${(totalSize / 1024).toFixed(2)} KB`);
+    console.log(`[INFO] Streaming duration: ${duration.toFixed(2)} seconds`);
+
+    res.write(`\n\n{"totalObjects": ${totalObjects}, "totalSizeKB": ${(totalSize / 1024).toFixed(2)}, "durationSec": ${duration.toFixed(2)}}`);
+
     res.end();
   } catch (error) {
     console.error("[ERROR] Error streaming JSON from S3:", error);
     res.status(500).json({ error: "Failed to fetch data from S3", details: error.message });
   }
 });
+
 
 // Start Express server
 app.listen(PORT, "0.0.0.0", () => {
